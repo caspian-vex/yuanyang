@@ -21,6 +21,8 @@ jobs:
         run: |
           for script in scripts/*.sh; do bash -n "$script"; done
           bash scripts/deploy.sh --help
+          if bash scripts/deploy.sh --source --version v0.1.0; then exit 1; fi
+          if bash scripts/deploy.sh --release --ref main; then exit 1; fi
       - run: bash scripts/build.sh
       - run: bash scripts/package.sh
       - uses: actions/upload-artifact@v4

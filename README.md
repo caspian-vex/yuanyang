@@ -12,6 +12,28 @@
 
 ## 构建与安装
 
+### 一行安装
+
+先把本次源码修改推送到 GitHub。以下命令在云服务器的 Bash 中执行，支持 Ubuntu 22.04/24.04、Debian 12/13 的 x86_64 系统，需要 root 或 sudo。服务器需能访问 GitHub、系统软件源；源码模式还需访问 Go、Node.js 和依赖源。
+
+**一键安装最新正式版本（推荐单核 / 512 MB 服务器使用）：**
+
+```bash
+set -o pipefail; curl -fsSL https://raw.githubusercontent.com/caspian-vex/yuanyang/main/scripts/deploy.sh | sudo bash -s -- --release
+```
+
+**直接拉取 main 源码、自动准备工具链、构建并安装（不依赖 Release）：**
+
+```bash
+set -o pipefail; curl -fsSL https://raw.githubusercontent.com/caspian-vex/yuanyang/main/scripts/deploy.sh | sudo bash -s -- --source
+```
+
+指定版本安装：在第一条命令末尾加 `--version v0.1.1`。指定源码分支、标签或提交：在第二条命令末尾加 `--ref v0.1.1`。同一命令可重复执行，已安装时自动进入带备份及失败回退的升级流程。默认通过 apt 安装所需系统依赖；将 `sudo bash` 改成 `sudo env INSTALL_DEPS=0 bash` 可跳过 apt，但仍需提前准备必需工具。源码模式会下载临时构建工具链，不替换系统 Go/Node.js，结束后清理工具链和构建缓存。
+
+安装包模式需要先有成功发布的 GitHub Release；无 Release 时会明确报错，可改用源码模式。源码编译与依赖安装不受面板运行时 100 MB 预算约束，512 MB 机器可能内存不足；脚本限制 Go 编译并行度，但不自动配置 Swap，也不保证低内存构建成功。构建失败不会停止或替换现有面板。
+
+安装后通过下文的 SSH 隧道读取令牌并完成初始化。脚本不会将 9090 直接开放公网。
+
 ### 从 GitHub 拉取部署（推荐）
 
 仓库地址：`https://github.com/caspian-vex/yuanyang`。推送 `v*` 标签后，GitHub Actions 自动构建、检查并发布带 SHA-256 校验文件的 Linux x86_64 安装包。云服务器无需 Go、Node.js 或 npm。
