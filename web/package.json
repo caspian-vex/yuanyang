@@ -1,0 +1,9 @@
+{
+  "name": "yuanyang-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev":"vite --host 127.0.0.1", "build":"vue-tsc --noEmit && vite build", "preview":"vite preview"},
+  "dependencies": {"vue":"^3.5.13", "@xterm/xterm":"^5.5.0", "@xterm/addon-fit":"^0.10.0"},
+  "devDependencies": {"@vitejs/plugin-vue":"^5.2.3", "typescript":"~5.7.3", "vite":"^6.2.2", "vue-tsc":"^2.2.8"}
+}

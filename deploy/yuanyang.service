@@ -1,0 +1,32 @@
+[Unit]
+Description=Yuanyang lightweight server panel
+After=network.target
+Requires=yuanyang-recover.service
+After=yuanyang-recover.service
+
+[Service]
+Type=simple
+Slice=yuanyang.slice
+User=yuanyang
+Group=yuanyang
+SupplementaryGroups=adm systemd-journal www-data
+WorkingDirectory=/opt/yuanyang
+ExecStart=/usr/local/bin/yuanyang -listen 127.0.0.1:9090 -data /var/lib/yuanyang -files /var/www -web /opt/yuanyang/web -trust-local-proxy
+Restart=on-failure
+RestartSec=5
+Environment=GOMEMLIMIT=64MiB
+Environment=GOMAXPROCS=1
+MemoryAccounting=yes
+MemoryHigh=85000000
+MemoryMax=100000000
+MemorySwapMax=0
+CPUAccounting=yes
+CPUQuota=100%
+TasksMax=64
+LimitNOFILE=512
+UMask=0077
+PrivateTmp=yes
+# sudo helper needs privilege escalation; do not set NoNewPrivileges here.
+
+[Install]
+WantedBy=multi-user.target

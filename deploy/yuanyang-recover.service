@@ -1,0 +1,15 @@
+[Unit]
+Description=Recover unconfirmed Yuanyang access changes after a reboot
+After=network.target ufw.service nginx.service
+Before=yuanyang.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/yuanyang safety-recover
+RemainAfterExit=yes
+Slice=yuanyang.slice
+NoNewPrivileges=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Aggregate memory and CPU budget for all Yuanyang panel processes
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=85000000
+MemoryMax=100000000
+MemorySwapMax=0
+CPUAccounting=yes
+CPUQuota=100%
+TasksMax=96
