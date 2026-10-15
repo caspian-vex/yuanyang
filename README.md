@@ -16,10 +16,10 @@
 
 先把本次源码修改推送到 GitHub。以下命令在云服务器的 Bash 中执行，支持 Ubuntu 22.04/24.04、Debian 12/13 的 x86_64 系统，需要 root 或 sudo。服务器需能访问 GitHub、系统软件源；源码模式还需访问 Go、Node.js 和依赖源。
 
-**一键安装最新正式版本（推荐单核 / 512 MB 服务器使用）：**
+**一键安装（优先安装包；最新 Release 返回 404 时自动从 main 源码构建）：**
 
 ```bash
-set -o pipefail; curl -fsSL https://raw.githubusercontent.com/caspian-vex/yuanyang/main/scripts/deploy.sh | sudo bash -s -- --release
+set -o pipefail; curl -fsSL https://raw.githubusercontent.com/caspian-vex/yuanyang/main/scripts/deploy.sh | sudo bash -s --
 ```
 
 **直接拉取 main 源码、自动准备工具链、构建并安装（不依赖 Release）：**
@@ -30,13 +30,13 @@ set -o pipefail; curl -fsSL https://raw.githubusercontent.com/caspian-vex/yuanya
 
 指定版本安装：在第一条命令末尾加 `--version v0.1.1`。指定源码分支、标签或提交：在第二条命令末尾加 `--ref v0.1.1`。同一命令可重复执行，已安装时自动进入带备份及失败回退的升级流程。默认通过 apt 安装所需系统依赖；将 `sudo bash` 改成 `sudo env INSTALL_DEPS=0 bash` 可跳过 apt，但仍需提前准备必需工具。源码模式会下载临时构建工具链，不替换系统 Go/Node.js，结束后清理工具链和构建缓存。
 
-安装包模式需要先有成功发布的 GitHub Release；无 Release 时会明确报错，可改用源码模式。源码编译与依赖安装不受面板运行时 100 MB 预算约束，512 MB 机器可能内存不足；脚本限制 Go 编译并行度，但不自动配置 Swap，也不保证低内存构建成功。构建失败不会停止或替换现有面板。
+默认模式仅在最新 Release 查询返回 HTTP 404 时回退源码；指定版本不存在、网络失败或校验失败均停止。末尾添加 `--release` 可强制只使用安装包，适合 512 MB 机器。源码编译与依赖安装不受面板运行时 100 MB 预算约束，512 MB 机器可能内存不足；脚本限制 Go 编译并行度，但不自动配置 Swap，也不保证低内存构建成功。构建失败不会停止或替换现有面板。
 
 安装后通过下文的 SSH 隧道读取令牌并完成初始化。脚本不会将 9090 直接开放公网。
 
 ### 从 GitHub 拉取部署（推荐）
 
-仓库地址：`https://github.com/caspian-vex/yuanyang`。推送 `v*` 标签后，GitHub Actions 自动构建、检查并发布带 SHA-256 校验文件的 Linux x86_64 安装包。云服务器无需 Go、Node.js 或 npm。
+仓库地址：`https://github.com/caspian-vex/yuanyang`。推送 main、推送 `v*` 标签或在 main 手动运行工作流后，GitHub Actions 自动构建、检查并发布带 SHA-256 校验文件的 Linux x86_64 安装包。main 构建使用唯一版本名 `v0.1.0-build.<运行编号>.<尝试编号>`，关联实际构建提交，并更新 latest 下载入口。云服务器使用安装包时无需 Go、Node.js 或 npm。
 
 先提交并推送本次修改，再在开发机发布版本：
 
@@ -46,7 +46,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-等待 Actions 的 `Build and release` 成功，并确认 Releases 已出现安装包。只推送源码不会发布版本；手动运行工作流只生成可下载的 Actions 构建产物。
+等待 Actions 的 `Build and release` 中 build 和 release 两个任务都成功，并确认 Releases 已出现安装包。只看到 build 成功并不代表安装包已经发布。main 的一次普通推送也会自动发布，不必额外创建标签；上面的标签命令用于发布指定版本。
 
 在云服务器执行（需 root 或 sudo，且能访问 GitHub）：
 

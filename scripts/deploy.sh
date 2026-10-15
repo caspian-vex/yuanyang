@@ -4,12 +4,13 @@ set -euo pipefail
 umask 077
 repo=${YUANYANG_REPO:-caspian-vex/yuanyang}
 version=${YUANYANG_VERSION:-latest}
-mode=release
+mode=auto
 ref=main
 ref_set=0
 version_set=0
 usage(){
-  echo 'Usage: bash deploy.sh [--source [--ref main|vTAG|COMMIT] | --release [--version latest|vTAG]]'
+  echo 'Usage: bash deploy.sh [--auto | --source [--ref main|vTAG|COMMIT] | --release [--version latest|vTAG]]'
+  echo 'Default: release first, source fallback only when latest release returns HTTP 404.'
   echo 'Legacy: bash deploy.sh vTAG'
   echo 'Environment: YUANYANG_REPO=owner/repo INSTALL_DEPS=1 (default); use INSTALL_DEPS=0 to skip apt.'
 }
@@ -17,6 +18,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
     --source) mode=source; shift ;;
+    --auto) mode=auto; shift ;;
     --release) mode=release; shift ;;
     --ref) [[ $# -ge 2 ]] || { usage; exit 1; }; ref=$2; ref_set=1; shift 2 ;;
     --version) [[ $# -ge 2 ]] || { usage; exit 1; }; version=$2; version_set=1; shift 2 ;;
@@ -27,7 +29,7 @@ done
 [[ $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo 'Invalid repository'; exit 1; }
 [[ $version == latest || $version =~ ^v[0-9][A-Za-z0-9._-]*$ ]] || { echo 'Invalid release version'; exit 1; }
 [[ $ref =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && $ref != *..* ]] || { echo 'Invalid source ref'; exit 1; }
-[[ $mode != release || $ref_set == 0 ]] || { echo '--ref requires --source'; exit 1; }
+[[ $mode == source || $ref_set == 0 ]] || { echo '--ref requires --source'; exit 1; }
 [[ $mode != source || $version_set == 0 ]] || { echo 'Use --ref to choose a source version'; exit 1; }
 [[ $(id -u) -eq 0 ]] || { echo 'Run as root or with sudo bash'; exit 1; }
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'Linux x86_64 required'; exit 1; }
@@ -55,6 +57,25 @@ verify(){
   actual=$(sha256sum "$2")
   [[ ${actual%% *} == "$expected" ]] || { echo "Checksum mismatch: $2"; exit 1; }
 }
+if [[ $mode == auto ]]; then
+  base="https://github.com/$repo/releases"
+  if [[ $version == latest ]]; then base="$base/latest/download"; else base="$base/download/$version"; fi
+  status=0
+  http_code=$(curl --location --silent --show-error --fail --proto '=https' --proto-redir '=https' --connect-timeout 15 --max-time 120 --retry 2 --write-out '%{http_code}' "$base/SHA256SUMS" -o "$work/SHA256SUMS") || status=$?
+  if [[ $status == 0 ]]; then
+    mode=release
+  elif [[ $status == 22 && $http_code == 404 && $version == latest ]]; then
+    echo 'No latest release is available (HTTP 404); switching to source build on main.'
+    echo 'Compilation needs more memory than the panel runtime; no swap is configured automatically.'
+    mode=source
+    if [[ $INSTALL_DEPS == 1 ]]; then
+      DEBIAN_FRONTEND=noninteractive apt-get install -y git jq xz-utils
+    fi
+  else
+    echo "Release lookup failed (curl=$status HTTP=$http_code); not falling back to a different version."
+    exit 1
+  fi
+fi
 if [[ $mode == source ]]; then
   for tool in git jq xz; do command -v "$tool" >/dev/null || { echo "Missing $tool; enable INSTALL_DEPS=1"; exit 1; }; done
   echo "Building $repo at $ref. Compilation needs more memory than the 100 MB runtime budget."
@@ -89,7 +110,7 @@ else
   base="https://github.com/$repo/releases"
   if [[ $version == latest ]]; then base="$base/latest/download"; else base="$base/download/$version"; fi
   echo "Downloading $repo ($version)..."
-  fetch "$base/SHA256SUMS" "$work/SHA256SUMS" || { echo 'Release unavailable. Publish a v* tag first, or run with --source.'; exit 1; }
+  fetch "$base/SHA256SUMS" "$work/SHA256SUMS" || { echo 'Release unavailable. Wait for the publish job to finish, or run without --release to enable automatic source fallback.'; exit 1; }
   fetch "$base/$asset" "$work/$asset"
   expected=$(awk -v asset="$asset" '$2 == asset {print $1}' "$work/SHA256SUMS")
   verify "$expected" "$work/$asset"
