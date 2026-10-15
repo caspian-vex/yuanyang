@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 command -v go >/dev/null || { echo 'Go >=1.26 required'; exit 1; }
 command -v npm >/dev/null || { echo 'Node.js >=20.19 with npm required'; exit 1; }
-(cd web && npm install && npm run build)
+(cd web && if [[ -f package-lock.json ]]; then npm ci; else npm install; fi && npm run build)
 go mod tidy
 gofmt -w cmd internal
 go test ./...

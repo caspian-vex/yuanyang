@@ -12,6 +12,44 @@
 
 ## 构建与安装
 
+### 从 GitHub 拉取部署（推荐）
+
+仓库地址：`https://github.com/caspian-vex/yuanyang`。推送 `v*` 标签后，GitHub Actions 自动构建、检查并发布带 SHA-256 校验文件的 Linux x86_64 安装包。云服务器无需 Go、Node.js 或 npm。
+
+先提交并推送本次修改，再在开发机发布版本：
+
+```bash
+git push origin main
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+等待 Actions 的 `Build and release` 成功，并确认 Releases 已出现安装包。只推送源码不会发布版本；手动运行工作流只生成可下载的 Actions 构建产物。
+
+在云服务器执行（需 root 或 sudo，且能访问 GitHub）：
+
+```bash
+curl -fL --proto '=https' --proto-redir '=https' \
+  https://raw.githubusercontent.com/caspian-vex/yuanyang/main/scripts/deploy.sh \
+  -o yuanyang-deploy.sh
+# 可先查看脚本；默认通过 apt 安装系统依赖
+sudo bash yuanyang-deploy.sh v0.1.0
+```
+
+也可以先拉取源码：
+
+```bash
+git clone https://github.com/caspian-vex/yuanyang.git
+cd yuanyang
+sudo bash scripts/deploy.sh v0.1.0
+```
+
+省略版本参数会安装最新正式 Release；已有安装自动走升级备份与失败回退。下载或校验失败不会替换现有程序。跳过系统依赖安装：`sudo env INSTALL_DEPS=0 bash scripts/deploy.sh v0.1.0`。当前下载入口面向公开仓库；私有仓库需自行下载有权限访问的安装包，执行包内安装脚本。SHA-256 用于校验传输完整性，发布权限由仓库控制。
+
+初次安装保持 `127.0.0.1:9090` 监听，按下文建立 SSH 隧道初始化，再配置 HTTPS 公网入口。云平台安全组需放行 SSH 和实际使用的 HTTP/HTTPS 端口。
+
+### 自行构建
+
 ```bash
 bash scripts/build.sh
 # 在测试服务器，以 root 执行；不自动安装依赖：

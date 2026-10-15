@@ -42,6 +42,12 @@ install -m 0644 deploy/yuanyang-recover.service /etc/systemd/system/yuanyang-rec
 systemctl daemon-reload
 systemctl enable yuanyang-recover.service
 systemctl enable --now yuanyang
+ready=0
+for attempt in {1..30}; do
+  if curl --fail --silent --max-time 2 http://127.0.0.1:9090/healthz >/dev/null; then ready=1; break; fi
+  sleep 1
+done
+[[ $ready == 1 ]] || { echo 'Startup health check failed. Inspect: journalctl -u yuanyang -n 100'; exit 1; }
 echo 'Installed. Connect using an SSH tunnel to 127.0.0.1:9090, or configure the HTTPS reverse proxy.'
 echo 'Initialization token: sudo cat /var/lib/yuanyang/setup-token'
 echo 'Existing sites, firewall rules, SSH configuration and cron entries have not been replaced.'
