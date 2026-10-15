@@ -28,7 +28,6 @@ func(a *App) Handler()http.Handler{
  mux:=http.NewServeMux()
  mux.HandleFunc("GET /healthz",func(w http.ResponseWriter,r *http.Request){w.Header().Set("Cache-Control","no-store");ctx,cancel:=context.WithTimeout(r.Context(),time.Second);defer cancel();if err:=a.db.PingContext(ctx);err!=nil{problem(w,503,errors.New("database unavailable"));return};reply(w,200,map[string]bool{"ok":true})})
  mux.HandleFunc("GET /api/status",func(w http.ResponseWriter,r *http.Request){var n int;a.db.QueryRow("SELECT count(*) FROM users").Scan(&n);reply(w,200,map[string]any{"initialized":n>0,"version":"0.1.0","name":a.setting("panel.name","鸳鸯")})})
- mux.HandleFunc("POST /api/setup",a.setup)
  mux.HandleFunc("POST /api/login",a.login)
  mux.HandleFunc("/api/",a.auth(a.api))
  mux.HandleFunc("/",func(w http.ResponseWriter,r *http.Request){if r.Method!="GET"{w.WriteHeader(405);return};p:=filepath.Join(a.web,filepath.Clean("/"+r.URL.Path));if st,e:=os.Stat(p);e==nil&&!st.IsDir(){http.ServeFile(w,r,p);return};http.ServeFile(w,r,filepath.Join(a.web,"index.html"))})
@@ -39,15 +38,6 @@ func(a *App) Handler()http.Handler{
  w.Header().Set("X-Content-Type-Options","nosniff");w.Header().Set("X-Frame-Options","DENY");w.Header().Set("Referrer-Policy","no-referrer");w.Header().Set("Content-Security-Policy","default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'")
  if strings.HasPrefix(r.URL.Path,"/api/"){w.Header().Set("Cache-Control","no-store")};mux.ServeHTTP(w,r)
  })
-}
-func(a *App) setup(w http.ResponseWriter,r *http.Request){
- var in struct{Token,Name,Password string};if !body(w,r,&in){return}
- if len(in.Name)<1||len(in.Name)>64||len(in.Password)<12||len(in.Password)>72{problem(w,400,errors.New("name required; password length must be 12–72 bytes"));return}
- a.setupMu.Lock();defer a.setupMu.Unlock()
- var n int;a.db.QueryRow("SELECT count(*) FROM users").Scan(&n)
- if n!=0||a.token==""||subtle.ConstantTimeCompare([]byte(in.Token),[]byte(a.token))!=1{problem(w,403,errors.New("invalid initialization token"));return}
- hash,err:=bcrypt.GenerateFromPassword([]byte(in.Password),bcrypt.DefaultCost);if err==nil{err=a.exec("INSERT INTO users(name,password,role) VALUES(?,?,'admin')",in.Name,string(hash))};if err!=nil{problem(w,500,err);return}
- a.token="";os.Remove(filepath.Join(a.data,"setup-token"));reply(w,201,map[string]bool{"ok":true})
 }
 func(a *App) login(w http.ResponseWriter,r *http.Request){
  select{case a.logins<-struct{}{}:defer func(){<-a.logins}();default:problem(w,429,errors.New("login capacity reached"));return}

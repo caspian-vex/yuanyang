@@ -20,12 +20,13 @@ import (
 func main() {
  runtime.GOMAXPROCS(1)
  debug.SetMemoryLimit(64 << 20)
+ if len(os.Args)>1&&os.Args[1]=="init-admin"{if len(os.Args)!=3{log.Fatal("usage: yuanyang init-admin DATA_DIRECTORY (run as service user while stopped)")};if err:=panel.InitializeAdmin(os.Args[2],os.Stdout);err!=nil{log.Fatal(err)};return}
  if len(os.Args)>1&&os.Args[1]=="helper"{if err:=panel.Helper(os.Stdin);err!=nil{log.Print(err);var exit *exec.ExitError;if errors.As(err,&exit)&&exit.ExitCode()>0{os.Exit(exit.ExitCode())};os.Exit(1)};return}
  if len(os.Args)>1&&os.Args[1]=="firewall-rollback"{if err:=panel.FirewallRollback();err!=nil{log.Fatal(err)};return}
  if len(os.Args)>1&&os.Args[1]=="gateway-rollback"{if err:=panel.GatewayRollback();err!=nil{log.Fatal(err)};return}
  if len(os.Args)>1&&os.Args[1]=="safety-recover"{if err:=panel.FirewallRollback();err!=nil{log.Fatal(err)};if err:=panel.GatewayRollback();err!=nil{log.Fatal(err)};return}
  if len(os.Args)>1&&os.Args[1]=="recover"{if len(os.Args)!=3{log.Fatal("usage: yuanyang recover DATA_DIRECTORY (password from stdin)")};if err:=panel.Recover(os.Args[2],os.Stdin);err!=nil{log.Fatal(err)};return}
- addr := flag.String("listen", "127.0.0.1:9090", "HTTP listen address; use a TLS reverse proxy")
+ addr := flag.String("listen", "0.0.0.0:9090", "HTTP listen address (default: all IPv4 interfaces on port 9090)")
  data := flag.String("data", "./data", "private data directory")
  root := flag.String("files", "/var/www", "file manager root")
  web := flag.String("web", "./web/dist", "built frontend directory")

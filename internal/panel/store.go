@@ -20,12 +20,10 @@ var initialSchema string
 
 type App struct {
  db *sql.DB
- setupMu sync.Mutex
  writeQueue chan writeRequest
  mutations sync.Mutex
  root *os.Root
  rootPath, web, data string
- token string
  ctx context.Context
  stop context.CancelFunc
  workers sync.WaitGroup
@@ -75,8 +73,6 @@ func New(ctx context.Context,data,root,web string)(*App,error){
  root=a.setting("files.root",root);a.rootPath=root
  a.root,err=os.OpenRoot(root)
  if err!=nil{db.Close();return nil,errors.New("file root must exist: "+root)}
- var count int;db.QueryRow("SELECT count(*) FROM users").Scan(&count)
- if count==0 { a.token=randomToken();if err=os.WriteFile(filepath.Join(data,"setup-token"),[]byte(a.token),0600);err!=nil{a.Close();return nil,err} }
  a.ctx,a.stop=context.WithCancel(ctx)
  for _,work:=range []func(){a.writeWorker,a.collect,a.schedule,a.worker,a.mailer,a.renewCertificates,a.watchServices}{a.workers.Add(1);go func(fn func()){defer a.workers.Done();fn()}(work)}
  return a,nil

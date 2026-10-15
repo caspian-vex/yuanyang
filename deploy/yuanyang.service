@@ -11,7 +11,7 @@ User=yuanyang
 Group=yuanyang
 SupplementaryGroups=adm systemd-journal www-data
 WorkingDirectory=/opt/yuanyang
-ExecStart=/usr/local/bin/yuanyang -listen 127.0.0.1:9090 -data /var/lib/yuanyang -files /var/www -web /opt/yuanyang/web -trust-local-proxy
+ExecStart=/usr/local/bin/yuanyang -listen 0.0.0.0:9090 -data /var/lib/yuanyang -files /var/www -web /opt/yuanyang/web -trust-local-proxy
 Restart=on-failure
 RestartSec=5
 Environment=GOMEMLIMIT=64MiB

@@ -38,9 +38,21 @@ for unit in yuanyang.service yuanyang.slice yuanyang-recover.service; do
   install -m 0644 "deploy/$unit" "/etc/systemd/system/$unit"
 done
 systemctl daemon-reload
+initial_credentials=$(sudo -u yuanyang /usr/local/bin/yuanyang init-admin /var/lib/yuanyang)
 systemctl start yuanyang
 sleep 3
 systemctl is-active --quiet yuanyang
 curl --fail --silent --show-error --max-time 5 http://127.0.0.1:9090/healthz >/dev/null
 trap - ERR
+if command -v ufw >/dev/null && LC_ALL=C ufw status | grep -q '^Status: active'; then
+  ufw allow 9090/tcp
+fi
+echo 'Panel address: http://<server-public-ip>:9090 (allow TCP 9090 in the cloud security group).'
 echo "Upgrade complete; previous data, key, executable and assets preserved at $backup"
+
+echo "部署端口：9090 / TCP"
+panel_host=${YUANYANG_PUBLIC_HOST:-$(hostname -I 2>/dev/null | awk '{print $1}' || true)}
+[[ $panel_host != *:* ]] || panel_host="[$panel_host]"
+printf '访问地址：http://%s:9090\n' "${panel_host:-服务器公网IP}"
+printf '%s\n' "$initial_credentials"
+unset initial_credentials

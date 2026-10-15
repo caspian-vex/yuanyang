@@ -40,6 +40,7 @@ install -m 0644 deploy/yuanyang.service /etc/systemd/system/yuanyang.service
 install -m 0644 deploy/yuanyang.slice /etc/systemd/system/yuanyang.slice
 install -m 0644 deploy/yuanyang-recover.service /etc/systemd/system/yuanyang-recover.service
 systemctl daemon-reload
+initial_credentials=$(sudo -u yuanyang /usr/local/bin/yuanyang init-admin /var/lib/yuanyang)
 systemctl enable yuanyang-recover.service
 systemctl enable --now yuanyang
 ready=0
@@ -48,6 +49,17 @@ for attempt in {1..30}; do
   sleep 1
 done
 [[ $ready == 1 ]] || { echo 'Startup health check failed. Inspect: journalctl -u yuanyang -n 100'; exit 1; }
-echo 'Installed. Connect using an SSH tunnel to 127.0.0.1:9090, or configure the HTTPS reverse proxy.'
-echo 'Initialization token: sudo cat /var/lib/yuanyang/setup-token'
+if command -v ufw >/dev/null && LC_ALL=C ufw status | grep -q '^Status: active'; then
+  ufw allow 9090/tcp
+fi
+echo 'Installed. Open http://<server-public-ip>:9090 in your browser.'
+echo 'Allow inbound TCP 9090 in your cloud security group or provider firewall.'
+echo '========== 鸳鸯面板部署完成 =========='
+panel_host=${YUANYANG_PUBLIC_HOST:-$(hostname -I 2>/dev/null | awk '{print $1}' || true)}
+[[ $panel_host != *:* ]] || panel_host="[$panel_host]"
+printf '访问地址：http://%s:9090\n' "${panel_host:-服务器公网IP}"
+echo '若服务器使用 NAT，请将地址替换为公网 IP，并放行云平台安全组 TCP 9090。'
+echo '部署端口：9090 / TCP'
+printf '%s\n' "$initial_credentials"
+unset initial_credentials
 echo 'Existing sites, firewall rules, SSH configuration and cron entries have not been replaced.'

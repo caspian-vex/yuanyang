@@ -2,12 +2,11 @@
 
 统一 `/api` 前缀，JSON 请求必须使用 `Content-Type: application/json`；JSON 返回。失败为 `{ "error": "message" }`，HTTP 400/401/403/404/409/429/500/503。列表默认 50，`limit` 最大 200，`offset` 为非负数。变更接口需 Cookie 和 `X-CSRF-Token`。不允许跨域。
 
-初始化和登录字段使用 PascalCase，资源字段按下表所示。后端拒绝未识别的 JSON 字段。`GET /healthz` 是不含敏感信息的部署健康检查，不受面板 API 白名单影响。服务列表返回 `{items:Service[]}`，支持 offset/limit/q；Service 包含 name/state/sub/startup/description。
+登录字段使用 PascalCase，资源字段按下表所示。后端拒绝未识别的 JSON 字段。`GET /healthz` 是不含敏感信息的部署健康检查，不受面板 API 白名单影响。服务列表返回 `{items:Service[]}`，支持 offset/limit/q；Service 包含 name/state/sub/startup/description。
 
 | 接口 | 方法 | 权限与内容 |
 |---|---|---|
 | `/status` | GET | 公开；initialized/version |
-| `/setup` | POST | 一次性 Token、Name、Password；至少 12 字节密码 |
 | `/login` | POST | Name、Password、Code；返回用户与 CSRF，设置 HttpOnly Cookie |
 | `/me` | GET | 当前用户 id/name/role/csrf |
 | `/logout` | POST | 撤销当前会话 |
@@ -48,6 +47,8 @@
 网站资源：`id,name,domains:string[],kind:static|proxy,root,upstream,enabled,https,redirect,notFound`。站点名称不可更改，静态目录必须位于 `/var/www/`。域名不可被多个受管网站重复占用。notFound 为可选自定义 404 URI。
 
 任务资源：`id,name,schedule,command,account,enabled,timeout,workdir`。timeout=1–900，account 不得 root/yuanyang。workdir 为空时使用账号主目录。GET 返回 `{task,next:string[]}` 列表，next 为未来五次执行时间。执行记录含 exit_code；列表输出仅返回前 4 KB，避免大批输出突破内存预算。
+
+账号初始化由本机命令 `sudo -u yuanyang /usr/local/bin/yuanyang init-admin /var/lib/yuanyang` 在服务停止时执行；仅数据库为空时创建 admin 并在终端显示随机密码，已存在账号则保持不变，不提供网页注册接口。
 
 设置键：`panel.name`、`smtp.host/port/user/password/from/to`、`alerts.enabled/cpu/memory/disk/load/services`、`alerts.quiet.start/end`、`security.allowIPs`、`session.idleMinutes/maxHours`、`files.root`、`uploads.maxMB`、`retention.auditDays/taskDays`。SMTP 必须支持 STARTTLS，默认端口 587。白名单不得排除当前来源 IP；部署服务信任回环代理的 X-Real-IP，该值必须由反向代理覆盖。
 
